@@ -62,31 +62,31 @@ class _MyAppState extends State<MyApp> {
       themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
-      home: DayzoHomePage(
-        darkMode: _darkMode,
-        onDarkModeChanged: _setDarkMode,
-      ),
+      home: DayzoHomePage(darkMode: _darkMode, onDarkModeChanged: _setDarkMode),
     );
   }
 }
 
 ThemeData _buildTheme(Brightness brightness) {
   final isDark = brightness == Brightness.dark;
-  final colorScheme = ColorScheme.fromSeed(
-    seedColor: _dayzoPurple,
-    brightness: brightness,
-  ).copyWith(
-    primary: _dayzoPurple,
-    secondary: _dayzoOrange,
-    tertiary: _dayzoGold,
-    surface: isDark ? const Color(0xFF171321) : const Color(0xFFFFFBFF),
-  );
+  final colorScheme =
+      ColorScheme.fromSeed(
+        seedColor: _dayzoPurple,
+        brightness: brightness,
+      ).copyWith(
+        primary: _dayzoPurple,
+        secondary: _dayzoOrange,
+        tertiary: _dayzoGold,
+        surface: isDark ? const Color(0xFF171321) : const Color(0xFFFFFBFF),
+      );
 
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: isDark ? const Color(0xFF100D17) : const Color(0xFFFFFBFF),
+    scaffoldBackgroundColor: isDark
+        ? const Color(0xFF100D17)
+        : const Color(0xFFFFFBFF),
     appBarTheme: AppBarTheme(
       centerTitle: false,
       elevation: 0,
@@ -152,14 +152,13 @@ class DayzoEvent {
       id: json['id'] as String,
       title: json['title'] as String,
       date: DateTime(parsedDate.year, parsedDate.month, parsedDate.day),
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
-  DayzoEvent copyWith({
-    String? title,
-    DateTime? date,
-  }) {
+  DayzoEvent copyWith({String? title, DateTime? date}) {
     return DayzoEvent(
       id: id,
       title: title ?? this.title,
@@ -210,7 +209,9 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
           if (item is Map<String, dynamic>) {
             loadedEvents.add(DayzoEvent.fromJson(item));
           } else if (item is Map) {
-            loadedEvents.add(DayzoEvent.fromJson(Map<String, dynamic>.from(item)));
+            loadedEvents.add(
+              DayzoEvent.fromJson(Map<String, dynamic>.from(item)),
+            );
           }
         }
       } catch (_) {
@@ -234,7 +235,9 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
   Future<void> _saveEvents() async {
     _events.sort(_compareEvents);
     final preferences = await SharedPreferences.getInstance();
-    final encodedEvents = jsonEncode(_events.map((event) => event.toJson()).toList());
+    final encodedEvents = jsonEncode(
+      _events.map((event) => event.toJson()).toList(),
+    );
     await preferences.setString(_eventsStorageKey, encodedEvents);
   }
 
@@ -260,7 +263,9 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
   }
 
   Future<void> _upsertEvent(DayzoEvent event) async {
-    final existingIndex = _events.indexWhere((storedEvent) => storedEvent.id == event.id);
+    final existingIndex = _events.indexWhere(
+      (storedEvent) => storedEvent.id == event.id,
+    );
     setState(() {
       if (existingIndex == -1) {
         _events.add(event);
@@ -304,7 +309,9 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Delete event?'),
-          content: Text('This will remove "${event.title}" from Dayzo on this device.'),
+          content: Text(
+            'This will remove "${event.title}" from Dayzo on this device.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -324,7 +331,9 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
       return;
     }
 
-    final originalIndex = _events.indexWhere((storedEvent) => storedEvent.id == event.id);
+    final originalIndex = _events.indexWhere(
+      (storedEvent) => storedEvent.id == event.id,
+    );
     setState(() {
       _events.removeWhere((storedEvent) => storedEvent.id == event.id);
     });
@@ -343,7 +352,9 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
             label: 'Undo',
             onPressed: () async {
               setState(() {
-                final insertIndex = originalIndex.clamp(0, _events.length).toInt();
+                final insertIndex = originalIndex
+                    .clamp(0, _events.length)
+                    .toInt();
                 _events.insert(insertIndex, event);
                 _events.sort(_compareEvents);
               });
@@ -398,7 +409,9 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
                 children: [
                   DayzoHeaderCard(
                     eventCount: _events.length,
-                    upcomingCount: _events.where((event) => !event.dateOnly.isBefore(_today)).length,
+                    upcomingCount: _events
+                        .where((event) => !event.dateOnly.isBefore(_today))
+                        .length,
                   ),
                   const SizedBox(height: 18),
                   if (_events.isEmpty)
@@ -407,8 +420,8 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
                     Text(
                       'Upcoming countdowns',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     for (final event in _events) ...[
@@ -441,7 +454,8 @@ class DayzoHeaderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       container: true,
-      label: 'Dayzo summary. $upcomingCount upcoming events. $eventCount total events.',
+      label:
+          'Dayzo summary. $upcomingCount upcoming events. $eventCount total events.',
       child: Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
@@ -506,11 +520,7 @@ class DayzoHeaderCard extends StatelessWidget {
             if (compact) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  copy,
-                  const SizedBox(height: 18),
-                  stats,
-                ],
+                children: [copy, const SizedBox(height: 18), stats],
               );
             }
 
@@ -530,10 +540,7 @@ class DayzoHeaderCard extends StatelessWidget {
 }
 
 class _HeaderStat extends StatelessWidget {
-  const _HeaderStat({
-    required this.label,
-    required this.value,
-  });
+  const _HeaderStat({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -576,10 +583,7 @@ class _HeaderStat extends StatelessWidget {
 }
 
 class EmptyEventsState extends StatelessWidget {
-  const EmptyEventsState({
-    super.key,
-    required this.onAddEvent,
-  });
+  const EmptyEventsState({super.key, required this.onAddEvent});
 
   final VoidCallback onAddEvent;
 
@@ -607,15 +611,17 @@ class EmptyEventsState extends StatelessWidget {
             Text(
               'No events yet',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
             Text(
               'Add a birthday, trip, launch, deadline, or personal milestone. Dayzo stores it only on this device.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.45),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(height: 1.45),
             ),
             const SizedBox(height: 18),
             FilledButton.icon(
@@ -645,10 +651,12 @@ class DayzoEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final countdown = CountdownInfo.fromDate(event.date);
+    final eventType = DayzoEventType.fromTitle(event.title);
 
     return Semantics(
       container: true,
-      label: '${event.title}. ${countdown.semanticLabel}. ${formatLongDate(event.date)}.',
+      label:
+          '${event.title}. ${eventType.label} event. ${countdown.semanticLabel}. ${formatLongDate(event.date)}.',
       child: Card(
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
@@ -661,13 +669,21 @@ class DayzoEventCard extends StatelessWidget {
                 final details = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      event.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            event.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w900),
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        EventTypeBadge(eventType: eventType),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -682,9 +698,8 @@ class DayzoEventCard extends StatelessWidget {
                         ),
                         Text(
                           formatLongDate(event.date),
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -712,11 +727,7 @@ class DayzoEventCard extends StatelessWidget {
                 if (compact) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      details,
-                      const SizedBox(height: 14),
-                      actions,
-                    ],
+                    children: [details, const SizedBox(height: 14), actions],
                   );
                 }
 
@@ -737,11 +748,86 @@ class DayzoEventCard extends StatelessWidget {
   }
 }
 
+enum DayzoEventType {
+  birthday('Birthday', Colors.orange),
+  travel('Travel', Colors.blue),
+  exam('Exam', Colors.indigo),
+  wedding('Wedding', Colors.pink),
+  anniversary('Anniversary', Colors.green),
+  deadline('Deadline', Colors.red),
+  meeting('Meeting', Colors.teal),
+  custom('Custom', _dayzoPurple);
+
+  const DayzoEventType(this.label, this.color);
+
+  final String label;
+  final Color color;
+
+  static DayzoEventType fromTitle(String title) {
+    final normalizedTitle = title.toLowerCase();
+    if (normalizedTitle.contains('birthday')) {
+      return DayzoEventType.birthday;
+    }
+    if (normalizedTitle.contains('travel') ||
+        normalizedTitle.contains('trip') ||
+        normalizedTitle.contains('flight') ||
+        normalizedTitle.contains('vacation')) {
+      return DayzoEventType.travel;
+    }
+    if (normalizedTitle.contains('exam') || normalizedTitle.contains('test')) {
+      return DayzoEventType.exam;
+    }
+    if (normalizedTitle.contains('wedding')) {
+      return DayzoEventType.wedding;
+    }
+    if (normalizedTitle.contains('anniversary')) {
+      return DayzoEventType.anniversary;
+    }
+    if (normalizedTitle.contains('deadline') ||
+        normalizedTitle.contains('due')) {
+      return DayzoEventType.deadline;
+    }
+    if (normalizedTitle.contains('meeting') ||
+        normalizedTitle.contains('call')) {
+      return DayzoEventType.meeting;
+    }
+    return DayzoEventType.custom;
+  }
+}
+
+class EventTypeBadge extends StatelessWidget {
+  const EventTypeBadge({super.key, required this.eventType});
+
+  final DayzoEventType eventType;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '${eventType.label} event type',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: eventType.color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          eventType.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: eventType.color,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class CountdownBadge extends StatelessWidget {
-  const CountdownBadge({
-    super.key,
-    required this.countdown,
-  });
+  const CountdownBadge({super.key, required this.countdown});
 
   final CountdownInfo countdown;
 
@@ -788,11 +874,7 @@ class CountdownBadge extends StatelessWidget {
 }
 
 class EventFormSheet extends StatefulWidget {
-  const EventFormSheet({
-    super.key,
-    required this.onSave,
-    this.event,
-  });
+  const EventFormSheet({super.key, required this.onSave, this.event});
 
   final DayzoEvent? event;
   final Future<void> Function(String title, DateTime date) onSave;
@@ -890,8 +972,8 @@ class _EventFormSheetState extends State<EventFormSheet> {
               Text(
                 widget.event == null ? 'Add event' : 'Edit event',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 18),
               TextFormField(
@@ -936,7 +1018,9 @@ class _EventFormSheetState extends State<EventFormSheet> {
                         suffixIcon: const Icon(Icons.arrow_drop_down),
                       ),
                       child: Text(
-                        _selectedDate == null ? 'Select a date' : formatLongDate(_selectedDate!),
+                        _selectedDate == null
+                            ? 'Select a date'
+                            : formatLongDate(_selectedDate!),
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
@@ -992,7 +1076,9 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: onDarkModeChanged,
                     secondary: const Icon(Icons.dark_mode_outlined),
                     title: const Text('Dark mode'),
-                    subtitle: const Text('Your theme choice is saved on this device.'),
+                    subtitle: const Text(
+                      'Your theme choice is saved on this device.',
+                    ),
                   ),
                   const Divider(height: 1),
                   const ListTile(
@@ -1004,7 +1090,9 @@ class SettingsScreen extends StatelessWidget {
                   const ListTile(
                     leading: Icon(Icons.storage_outlined),
                     title: Text('Storage'),
-                    subtitle: Text('Events and settings stay in local device storage only.'),
+                    subtitle: Text(
+                      'Events and settings stay in local device storage only.',
+                    ),
                   ),
                 ],
               ),
@@ -1053,11 +1141,7 @@ class SettingsScreen extends StatelessWidget {
 }
 
 class LegalScreen extends StatelessWidget {
-  const LegalScreen({
-    super.key,
-    required this.title,
-    required this.sections,
-  });
+  const LegalScreen({super.key, required this.title, required this.sections});
 
   final String title;
   final List<LegalSection> sections;
@@ -1079,16 +1163,15 @@ class LegalScreen extends StatelessWidget {
                     Text(
                       'Dayzo - Countdown & Event Tracker',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: _dayzoPurple,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        color: _dayzoPurple,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 8),
                     const Text('Last Updated: $_lastUpdated'),
@@ -1109,10 +1192,7 @@ class LegalScreen extends StatelessWidget {
 }
 
 class LegalSectionCard extends StatelessWidget {
-  const LegalSectionCard({
-    super.key,
-    required this.section,
-  });
+  const LegalSectionCard({super.key, required this.section});
 
   final LegalSection section;
 
@@ -1126,15 +1206,17 @@ class LegalSectionCard extends StatelessWidget {
           children: [
             Text(
               section.title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 10),
             for (final paragraph in section.paragraphs) ...[
               Text(
                 paragraph,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(height: 1.5),
               ),
               const SizedBox(height: 10),
             ],
@@ -1169,7 +1251,11 @@ class CountdownInfo {
 
   factory CountdownInfo.fromDate(DateTime date, {DateTime? now}) {
     final currentMoment = now ?? DateTime.now();
-    final today = DateTime(currentMoment.year, currentMoment.month, currentMoment.day);
+    final today = DateTime(
+      currentMoment.year,
+      currentMoment.month,
+      currentMoment.day,
+    );
     final targetDate = DateTime(date.year, date.month, date.day);
     final calendarDays = targetDate.difference(today).inDays;
 
@@ -1178,8 +1264,12 @@ class CountdownInfo {
       return CountdownInfo(
         label: 'Done',
         caption: 'Past',
-        detail: daysAgo == 1 ? 'Completed 1 day ago' : 'Completed $daysAgo days ago',
-        semanticLabel: daysAgo == 1 ? 'Completed 1 day ago' : 'Completed $daysAgo days ago',
+        detail: daysAgo == 1
+            ? 'Completed 1 day ago'
+            : 'Completed $daysAgo days ago',
+        semanticLabel: daysAgo == 1
+            ? 'Completed 1 day ago'
+            : 'Completed $daysAgo days ago',
         isPast: true,
       );
     }
@@ -1195,7 +1285,9 @@ class CountdownInfo {
     }
 
     final exactRemaining = targetDate.difference(currentMoment);
-    final detail = exactRemaining.isNegative ? 'Starts soon' : 'Starts in ${formatDuration(exactRemaining)}';
+    final detail = exactRemaining.isNegative
+        ? 'Starts soon'
+        : 'Starts in ${formatDuration(exactRemaining)}';
     final dayLabel = calendarDays == 1 ? '1 day' : '$calendarDays days';
 
     return CountdownInfo(
