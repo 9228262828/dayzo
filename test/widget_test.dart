@@ -5,6 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dayzo/main.dart';
 
 void main() {
+  Future<void> openHome(WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Start'));
+    await tester.pumpAndSettle();
+  }
+
   test('Dayzo event type mapping uses requested badge colors', () {
     expect(
       DayzoEventType.fromTitle('Birthday dinner'),
@@ -34,13 +42,47 @@ void main() {
     expect(DayzoEventType.custom.color, const Color(0xFF6A35FF));
   });
 
+  test('Dayzo event model saves and loads event type', () {
+    final event = DayzoEvent(
+      id: '1',
+      title: 'Biology final',
+      eventType: DayzoEventType.exam,
+      date: DateTime(2030, 5, 12),
+      createdAt: DateTime(2026, 6, 23),
+    );
+
+    final json = event.toJson();
+    expect(json['eventType'], 'exam');
+
+    final loadedEvent = DayzoEvent.fromJson(json);
+    expect(loadedEvent.eventType, DayzoEventType.exam);
+
+    final legacyEvent = DayzoEvent.fromJson({
+      'id': '2',
+      'title': 'Travel to Tokyo',
+      'date': DateTime(2030, 7, 18).toIso8601String(),
+      'createdAt': DateTime(2026, 6, 23).toIso8601String(),
+    });
+    expect(legacyEvent.eventType, DayzoEventType.travel);
+  });
+
+  testWidgets('Dayzo shows the splash screen', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dayzo'), findsOneWidget);
+    expect(find.text('Every day counts.'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
+  });
+
   testWidgets('Dayzo shows the improved empty state', (
     WidgetTester tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
 
-    await tester.pumpWidget(const MyApp());
-    await tester.pumpAndSettle();
+    await openHome(tester);
 
     expect(find.text('Dayzo'), findsWidgets);
     expect(find.text('Countdown & Event Tracker'), findsOneWidget);
@@ -53,11 +95,13 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
 
-    await tester.pumpWidget(const MyApp());
-    await tester.pumpAndSettle();
+    await openHome(tester);
 
     await tester.tap(find.byTooltip('Add event'));
     await tester.pumpAndSettle();
+
+    expect(find.text('Event type'), findsOneWidget);
+    expect(find.text('Custom'), findsOneWidget);
 
     await tester.tap(find.text('Save event'));
     await tester.pumpAndSettle();
@@ -75,7 +119,8 @@ void main() {
           body: DayzoEventCard(
             event: DayzoEvent(
               id: '1',
-              title: 'Travel to Rome',
+              title: 'Rome plans',
+              eventType: DayzoEventType.travel,
               date: DateTime(2030, 7, 18),
               createdAt: DateTime(2026, 6, 23),
             ),
@@ -86,7 +131,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Travel to Rome'), findsOneWidget);
+    expect(find.text('Rome plans'), findsOneWidget);
     expect(find.text('Travel'), findsOneWidget);
   });
 }

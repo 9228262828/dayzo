@@ -9,6 +9,7 @@ const _dayzoOrange = Color(0xFFFF8A3D);
 const _dayzoGold = Color(0xFFFFC15E);
 const _eventsStorageKey = 'dayzo.events.v1';
 const _darkModeStorageKey = 'dayzo.darkMode.v1';
+const _dayzoLogoAsset = 'assets/logo.png';
 const _appVersion = '1.0.0';
 const _appBuild = '1';
 const _lastUpdated = 'June 23, 2026';
@@ -27,6 +28,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _darkMode = false;
+  bool _started = false;
 
   @override
   void initState() {
@@ -54,6 +56,12 @@ class _MyAppState extends State<MyApp> {
     await preferences.setBool(_darkModeStorageKey, enabled);
   }
 
+  void _openHome() {
+    setState(() {
+      _started = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -62,7 +70,12 @@ class _MyAppState extends State<MyApp> {
       themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
-      home: DayzoHomePage(darkMode: _darkMode, onDarkModeChanged: _setDarkMode),
+      home: _started
+          ? DayzoHomePage(
+              darkMode: _darkMode,
+              onDarkModeChanged: _setDarkMode,
+            )
+          : SplashScreen(onStart: _openHome),
     );
   }
 }
@@ -126,12 +139,14 @@ class DayzoEvent {
   DayzoEvent({
     required this.id,
     required this.title,
+    required this.eventType,
     required this.date,
     required this.createdAt,
   });
 
   final String id;
   final String title;
+  final DayzoEventType eventType;
   final DateTime date;
   final DateTime createdAt;
 
@@ -141,16 +156,22 @@ class DayzoEvent {
     return {
       'id': id,
       'title': title,
+      'eventType': eventType.storageValue,
       'date': dateOnly.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
     };
   }
 
   factory DayzoEvent.fromJson(Map<String, dynamic> json) {
+    final title = json['title'] as String;
     final parsedDate = DateTime.parse(json['date'] as String);
     return DayzoEvent(
       id: json['id'] as String,
-      title: json['title'] as String,
+      title: title,
+      eventType: DayzoEventType.fromStorageValue(
+        json['eventType'] as String?,
+        fallbackTitle: title,
+      ),
       date: DateTime(parsedDate.year, parsedDate.month, parsedDate.day),
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
@@ -158,12 +179,84 @@ class DayzoEvent {
     );
   }
 
-  DayzoEvent copyWith({String? title, DateTime? date}) {
+  DayzoEvent copyWith({
+    String? title,
+    DayzoEventType? eventType,
+    DateTime? date,
+  }) {
     return DayzoEvent(
       id: id,
       title: title ?? this.title,
+      eventType: eventType ?? this.eventType,
       date: date ?? this.date,
       createdAt: createdAt,
+    );
+  }
+}
+
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({
+    super.key,
+    required this.onStart,
+  });
+
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 128,
+                  height: 128,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: _dayzoPurple.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(36),
+                  ),
+                  child: Image.asset(
+                    _dayzoLogoAsset,
+                    semanticLabel: 'Dayzo logo',
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'Dayzo',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Every day counts.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 36),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: onStart,
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Start'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -286,15 +379,20 @@ class _DayzoHomePageState extends State<DayzoHomePage> {
       builder: (context) {
         return EventFormSheet(
           event: event,
-          onSave: (title, date) async {
+          onSave: (title, eventType, date) async {
             final savedEvent = event == null
                 ? DayzoEvent(
                     id: DateTime.now().microsecondsSinceEpoch.toString(),
                     title: title,
+                    eventType: eventType,
                     date: date,
                     createdAt: DateTime.now(),
                   )
-                : event.copyWith(title: title, date: date);
+                : event.copyWith(
+                    title: title,
+                    eventType: eventType,
+                    date: date,
+                  );
 
             await _upsertEvent(savedEvent);
           },
@@ -597,14 +695,14 @@ class EmptyEventsState extends StatelessWidget {
             Container(
               width: 76,
               height: 76,
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: _dayzoOrange.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
-                Icons.event_available_outlined,
-                color: _dayzoOrange,
-                size: 38,
+              child: Image.asset(
+                _dayzoLogoAsset,
+                semanticLabel: 'Dayzo logo',
               ),
             ),
             const SizedBox(height: 18),
@@ -651,7 +749,7 @@ class DayzoEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final countdown = CountdownInfo.fromDate(event.date);
-    final eventType = DayzoEventType.fromTitle(event.title);
+    final eventType = event.eventType;
 
     return Semantics(
       container: true,
@@ -762,6 +860,31 @@ enum DayzoEventType {
 
   final String label;
   final Color color;
+
+  String get storageValue => name;
+
+  static DayzoEventType fromStorageValue(
+    String? value, {
+    String? fallbackTitle,
+  }) {
+    if (value == null || value.isEmpty) {
+      return fallbackTitle == null
+          ? DayzoEventType.custom
+          : DayzoEventType.fromTitle(fallbackTitle);
+    }
+
+    final normalizedValue = value.toLowerCase();
+    for (final eventType in DayzoEventType.values) {
+      if (eventType.name == normalizedValue ||
+          eventType.label.toLowerCase() == normalizedValue) {
+        return eventType;
+      }
+    }
+
+    return fallbackTitle == null
+        ? DayzoEventType.custom
+        : DayzoEventType.fromTitle(fallbackTitle);
+  }
 
   static DayzoEventType fromTitle(String title) {
     final normalizedTitle = title.toLowerCase();
@@ -877,7 +1000,11 @@ class EventFormSheet extends StatefulWidget {
   const EventFormSheet({super.key, required this.onSave, this.event});
 
   final DayzoEvent? event;
-  final Future<void> Function(String title, DateTime date) onSave;
+  final Future<void> Function(
+    String title,
+    DayzoEventType eventType,
+    DateTime date,
+  ) onSave;
 
   @override
   State<EventFormSheet> createState() => _EventFormSheetState();
@@ -886,6 +1013,7 @@ class EventFormSheet extends StatefulWidget {
 class _EventFormSheetState extends State<EventFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
+  late DayzoEventType _selectedEventType;
   DateTime? _selectedDate;
   bool _saving = false;
 
@@ -893,6 +1021,7 @@ class _EventFormSheetState extends State<EventFormSheet> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.event?.title ?? '');
+    _selectedEventType = widget.event?.eventType ?? DayzoEventType.custom;
     _selectedDate = widget.event?.date;
   }
 
@@ -937,7 +1066,11 @@ class _EventFormSheetState extends State<EventFormSheet> {
       _saving = true;
     });
 
-    await widget.onSave(_titleController.text.trim(), _selectedDate!);
+    await widget.onSave(
+      _titleController.text.trim(),
+      _selectedEventType,
+      _selectedDate!,
+    );
 
     if (!mounted) {
       return;
@@ -996,6 +1129,32 @@ class _EventFormSheetState extends State<EventFormSheet> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<DayzoEventType>(
+                initialValue: _selectedEventType,
+                decoration: const InputDecoration(
+                  labelText: 'Event type',
+                  prefixIcon: Icon(Icons.category_outlined),
+                ),
+                items: [
+                  for (final eventType in DayzoEventType.values)
+                    DropdownMenuItem<DayzoEventType>(
+                      value: eventType,
+                      child: Text(eventType.label),
+                    ),
+                ],
+                onChanged: _saving
+                    ? null
+                    : (eventType) {
+                        if (eventType == null) {
+                          return;
+                        }
+
+                        setState(() {
+                          _selectedEventType = eventType;
+                        });
+                      },
               ),
               const SizedBox(height: 12),
               FormField<DateTime>(
@@ -1068,6 +1227,8 @@ class SettingsScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
+            const SettingsHeaderCard(),
+            const SizedBox(height: 16),
             Card(
               child: Column(
                 children: [
@@ -1128,6 +1289,57 @@ class SettingsScreen extends StatelessWidget {
                           sections: termsSections,
                         ),
                       ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SettingsHeaderCard extends StatelessWidget {
+  const SettingsHeaderCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _dayzoPurple.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Image.asset(
+                _dayzoLogoAsset,
+                semanticLabel: 'Dayzo logo',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Dayzo',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Every day counts.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
